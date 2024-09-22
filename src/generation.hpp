@@ -1,7 +1,10 @@
 #pragma once
 
-#include <algorithm>
+#include <iostream>
+#include "parser.hpp"
 #include <cassert>
+#include <string>
+#include <sstream>
 
 #include "parser.hpp"
 
@@ -96,6 +99,84 @@ public:
         std::visit(visitor, bin_expr->var);
     }
 
+    void gen_bool_expr(const NodeBoolExpr *bool_expr) {
+      struct BoolExprVisitor {
+        Generator &gen;
+
+        void operator()(const NodeBoolExprGreater *expr) const {
+          gen.gen_expr(expr->rhs);
+          gen.gen_expr(expr->lhs);
+          gen.pop("rax");
+          gen.pop("rbx");
+          gen.m_output << "    cmp rax, rbx\n";
+          gen.m_output << "    setg al\n";
+          gen.m_output << "    movzx rax, al\n";
+          gen.push("rax");
+        }
+        void operator()(const NodeBoolExprLess *expr) const {
+          gen.gen_expr(expr->rhs);
+          gen.gen_expr(expr->lhs);
+          gen.pop("rax");
+          gen.pop("rbx");
+          gen.m_output << "    cmp rax, rbx\n";
+          gen.m_output << "    setl al\n";
+          gen.m_output << "    movzx rax, al\n";
+          gen.push("rax");
+        }
+        void operator()(const NodeBoolExprGreaterEqual *expr) const {
+          gen.gen_expr(expr->rhs);
+          gen.gen_expr(expr->lhs);
+          gen.pop("rax");
+          gen.pop("rbx");
+          gen.m_output << "    cmp rax, rbx\n";
+          gen.m_output << "    setge al\n";
+          gen.m_output << "    movzx rax, al\n";
+          gen.push("rax");
+        }
+        void operator()(const NodeBoolExprLessEqual *expr) const {
+          gen.gen_expr(expr->rhs);
+          gen.gen_expr(expr->lhs);
+          gen.pop("rax");
+          gen.pop("rbx");
+          gen.m_output << "    cmp rax, rbx\n";
+          gen.m_output << "    setle al\n";
+          gen.m_output << "    movzx rax, al\n";
+          gen.push("rax");
+        }
+        void operator()(const NodeBoolExprEqual *expr) const {
+          gen.gen_expr(expr->rhs);
+          gen.gen_expr(expr->lhs);
+          gen.pop("rax");
+          gen.pop("rbx");
+          gen.m_output << "    cmp rax, rbx\n";
+          gen.m_output << "    sete al\n";
+          gen.m_output << "    movzx rax, al\n";
+          gen.push("rax");
+        }
+        void operator()(const NodeBoolExprNotEqual *expr) const {
+          gen.gen_expr(expr->rhs);
+          gen.gen_expr(expr->lhs);
+          gen.pop("rax");
+          gen.pop("rbx");
+          gen.m_output << "    cmp rax, rbx\n";
+          gen.m_output << "    setne al\n";
+          gen.m_output << "    movzx rax, al\n";
+          gen.push("rax");
+        }
+        void operator()(const NodeBoolExprTrue *expr) const {
+          gen.m_output << "    mov rax, 1\n";
+          gen.push("rax");
+        }
+        void operator()(const NodeBoolExprFalse *expr) const {
+          gen.m_output << "    mov rax, 0\n";
+          gen.push("rax");
+        }
+      };
+
+      BoolExprVisitor visitor{.gen = *this};
+      std::visit(visitor, bool_expr->var);
+    }
+
     void gen_expr(const NodeExpr* expr)
     {
         struct ExprVisitor {
@@ -131,19 +212,19 @@ public:
             Generator& gen;
             const std::string& end_label;
 
-            void operator()(const NodeIfPredElif* elif) const
+            void operator()(const NodeIfPredElif* elif_) const
             {
                 gen.m_output << "    ;; elif\n";
-                gen.gen_expr(elif->expr);
+                gen.gen_bool_expr(elif_->bool_);
                 gen.pop("rax");
                 const std::string label = gen.create_label();
                 gen.m_output << "    test rax, rax\n";
                 gen.m_output << "    jz " << label << "\n";
-                gen.gen_scope(elif->scope);
+                gen.gen_scope(elif_->scope);
                 gen.m_output << "    jmp " << end_label << "\n";
-                if (elif->pred.has_value()) {
+                if (elif_->pred.has_value()) {
                     gen.m_output << label << ":\n";
-                    gen.gen_if_pred(elif->pred.value(), end_label);
+                    gen.gen_if_pred(elif_->pred.value(), end_label);
                 }
             }
 
@@ -212,7 +293,7 @@ public:
             void operator()(const NodeStmtIf* stmt_if) const
             {
                 gen.m_output << "    ;; if\n";
-                gen.gen_expr(stmt_if->expr);
+                gen.gen_bool_expr(stmt_if->bool_);
                 gen.pop("rax");
                 const std::string label = gen.create_label();
                 gen.m_output << "    test rax, rax\n";
@@ -229,6 +310,21 @@ public:
                     gen.m_output << label << ":\n";
                 }
                 gen.m_output << "    ;; /if\n";
+            }
+            void operator()(const NodeStmtWhile *stmt_while) const 
+            {
+              gen.m_output << "    ;; while\n";
+              const std::string labelStart = gen.create_label();
+              const std::string labelEnd = gen.create_label();
+              gen.m_output << "    jmp " << labelEnd << "\n";
+              gen.m_output << labelStart << ":\n";
+              gen.gen_scope(stmt_while->scope);
+              gen.m_output << labelEnd << ":\n";
+              gen.gen_bool_expr(stmt_while->bool_);
+              gen.pop("rax");
+              gen.m_output << "    test rax, rax\n";
+              gen.m_output << "    jnz " << labelStart << "\n";
+              gen.m_output << "    ;; /while\n";
             }
         };
 

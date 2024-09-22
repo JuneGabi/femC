@@ -1,10 +1,12 @@
 #pragma once
 
+#include <iostream>
 #include <cassert>
+#include <optional>
 #include <variant>
 
-#include "arena.hpp"
-#include "tokenization.hpp"
+#include "./arena.hpp"
+#include "./tokenization.hpp"
 
 struct NodeTermIntLit {
     Token int_lit;
@@ -40,6 +42,48 @@ struct NodeBinExprDiv {
     NodeExpr* rhs;
 };
 
+struct NodeBoolExpr;
+
+struct NodeBoolExprGreater {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBoolExprLess {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBoolExprGreaterEqual {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBoolExprLessEqual {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBoolExprEqual {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBoolExprNotEqual {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBoolExprTrue {
+};
+
+struct NodeBoolExprFalse {
+};
+
+struct NodeBoolExpr {
+    std::variant<NodeBoolExprGreater*, NodeBoolExprLess*, NodeBoolExprGreaterEqual*, NodeBoolExprLessEqual*, NodeBoolExprEqual*, NodeBoolExprNotEqual*, NodeBoolExprTrue*, NodeBoolExprFalse*> var;
+};
+
 struct NodeBinExpr {
     std::variant<NodeBinExprAdd*, NodeBinExprMulti*, NodeBinExprSub*, NodeBinExprDiv*> var;
 };
@@ -70,7 +114,7 @@ struct NodeScope {
 struct NodeIfPred;
 
 struct NodeIfPredElif {
-    NodeExpr* expr {};
+    NodeBoolExpr* bool_ {};
     NodeScope* scope {};
     std::optional<NodeIfPred*> pred;
 };
@@ -84,9 +128,14 @@ struct NodeIfPred {
 };
 
 struct NodeStmtIf {
-    NodeExpr* expr {};
+    NodeBoolExpr* bool_ {};
     NodeScope* scope {};
     std::optional<NodeIfPred*> pred;
+};
+
+struct NodeStmtWhile {
+    NodeBoolExpr* bool_ {};
+    NodeScope* scope {};
 };
 
 struct NodeStmtAssign {
@@ -95,7 +144,7 @@ struct NodeStmtAssign {
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtLet*, NodeScope*, NodeStmtIf*, NodeStmtAssign*> var;
+    std::variant<NodeStmtExit*, NodeStmtLet*, NodeScope*, NodeStmtIf*, NodeStmtWhile*, NodeStmtAssign*> var;
 };
 
 struct NodeProg {
@@ -210,13 +259,96 @@ public:
         return scope;
     }
 
+    std::optional<NodeBoolExpr*> parse_bool() {
+      if (const auto lhs = parse_expr()) {
+        if (auto op = try_consume(TokenType::gt)) {
+          auto bool_gt = m_allocator.emplace<NodeBoolExprGreater>();
+          bool_gt->lhs = lhs.value();
+          if (const auto rhs = parse_expr()) {
+            bool_gt->rhs = rhs.value();
+          } else {
+            error_expected("expression after >");
+          }
+          auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_gt);
+          return bool_expr;
+        }
+        if (auto op = try_consume(TokenType::lt)) {
+          auto bool_lt = m_allocator.emplace<NodeBoolExprLess>();
+          bool_lt->lhs = lhs.value();
+          if (const auto rhs = parse_expr()) {
+            bool_lt->rhs = rhs.value();
+          } else {
+            error_expected("expression after <");
+          }
+          auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_lt);
+          return bool_expr;
+        }
+        if (auto op = try_consume(TokenType::gt_eq)) {
+          auto bool_ge = m_allocator.emplace<NodeBoolExprGreaterEqual>();
+          bool_ge->lhs = lhs.value();
+          if (const auto rhs = parse_expr()) {
+            bool_ge->rhs = rhs.value();
+          } else {
+            error_expected("expression after >=");
+          }
+          auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_ge);
+          return bool_expr;
+        }
+        if (auto op = try_consume(TokenType::lt_eq)) {
+          auto bool_le = m_allocator.emplace<NodeBoolExprLessEqual>();
+          bool_le->lhs = lhs.value();
+          if (const auto rhs = parse_expr()) {
+            bool_le->rhs = rhs.value();
+          } else {
+            error_expected("expression after <=");
+          }
+          auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_le);
+          return bool_expr;
+        }
+        if (auto op = try_consume(TokenType::equal_comp)) {
+          auto bool_equal = m_allocator.emplace<NodeBoolExprEqual>();
+          bool_equal->lhs = lhs.value();
+          if (const auto rhs = parse_expr()) {
+            bool_equal->rhs = rhs.value();
+          } else {
+            error_expected("expression after ==");
+          }
+          auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_equal);
+          return bool_expr;
+        }
+        if (auto op = try_consume(TokenType::diff_comp)) {
+          auto bool_not_equal = m_allocator.emplace<NodeBoolExprNotEqual>();
+          bool_not_equal->lhs = lhs.value();
+          if (const auto rhs = parse_expr()) {
+            bool_not_equal->rhs = rhs.value();
+          } else {
+            error_expected("expression after !=");
+          }
+          auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_not_equal);
+          return bool_expr;
+        }
+      }
+      if (auto true_token = try_consume(TokenType::true_)) {
+        auto bool_true = m_allocator.emplace<NodeBoolExprTrue>();
+        auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_true);
+        return bool_expr;
+      }
+
+      if (auto false_token = try_consume(TokenType::false_)) {
+        auto bool_false = m_allocator.emplace<NodeBoolExprFalse>();
+        auto bool_expr = m_allocator.emplace<NodeBoolExpr>(bool_false);
+        return bool_expr;
+      }
+      return {};
+    }
+
     std::optional<NodeIfPred*> parse_if_pred() // NOLINT(*-no-recursion)
     {
-        if (try_consume(TokenType::elif)) {
+        if (try_consume(TokenType::elif_)) {
             try_consume_err(TokenType::open_paren);
             const auto elif = m_allocator.alloc<NodeIfPredElif>();
-            if (const auto expr = parse_expr()) {
-                elif->expr = expr.value();
+            if (const auto bool_ = parse_bool()) {
+                elif->bool_ = bool_.value();
             }
             else {
                 error_expected("expression");
@@ -308,11 +440,11 @@ public:
         if (auto if_ = try_consume(TokenType::if_)) {
             try_consume_err(TokenType::open_paren);
             auto stmt_if = m_allocator.emplace<NodeStmtIf>();
-            if (const auto expr = parse_expr()) {
-                stmt_if->expr = expr.value();
+            if (const auto bool_ = parse_bool()) {
+                stmt_if->bool_ = bool_.value();
             }
             else {
-                error_expected("expression");
+                error_expected("boolean");
             }
             try_consume_err(TokenType::close_paren);
             if (const auto scope = parse_scope()) {
@@ -323,6 +455,25 @@ public:
             }
             stmt_if->pred = parse_if_pred();
             auto stmt = m_allocator.emplace<NodeStmt>(stmt_if);
+            return stmt;
+        }
+        if (auto if_ = try_consume(TokenType::while_)) {
+            try_consume_err(TokenType::open_paren);
+            auto stmt_while = m_allocator.emplace<NodeStmtWhile>();
+            if (const auto bool_ = parse_bool()) {
+                stmt_while->bool_ = bool_.value();
+            }
+            else {
+                error_expected("expression");
+            }
+            try_consume_err(TokenType::close_paren);
+            if (const auto scope = parse_scope()) {
+                stmt_while->scope = scope.value();
+            }
+            else {
+                error_expected("scope");
+            }
+            auto stmt = m_allocator.emplace<NodeStmt>(stmt_while);
             return stmt;
         }
         return {};

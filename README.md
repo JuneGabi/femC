@@ -1,29 +1,34 @@
-# Hydrogen Lang (CPP Compiler)
+# FemC Lang (CPP Compiler)
 
-Hydrogen is a Hobby programming language. It is called Hydrogen because it is simple, lightweight, and will catch on
-fire if handled improperly🔥
+![femC logo](./femC_logo.png)
+
+This is my project as a personal study with compilers.
+
+femC is a joke with a video game character name, but I'll probably take inspirations from C for the language syntax.
 
 This compiler is written in C++ but hopefully it will get to a point where it can be self-hosted.
+
+This project was based on the Hydrogen programming language by Pixeled, I think the series was descontinued so I made a fork to commit my personal changes to the project and hopefully finish it.
+
+This won't be released! ^^
 
 ## Building
 
 Requires `nasm` and `ld` on a Linux operating system.
 
 ```bash
-git clone https://github.com/orosmatthew/hydrogen-cpp
-cd hydrogen-cpp
+git clone https://github.com/JuneGabi/femC
+cd femC
 mkdir build
 cmake -S . -B build
 cmake --build build
 ```
 
-Executable will be `hydro` in the `build/` directory.
+Executable will be `femc` in the `build/` directory.
 
-## Contributing
+## Compilation and execution
 
-I am not accepting pull requests for now to better keep in sync with the accompanying video series. Possibly in the future.
-
-## Watch the Development
-
-YouTube video
-series "[Creating a Compiler](https://www.youtube.com/playlist?list=PLUDlas_Zy_qC7c5tCgTMYq2idyyT241qs)" by Pixeled
+```bash
+./build/femc ./main.femc
+./out; echo $?
+```

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cassert>
+#include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,8 +22,17 @@ enum class TokenType {
     open_curly,
     close_curly,
     if_,
-    elif,
+    elif_,
     else_,
+    while_,
+    gt,
+    lt,
+    gt_eq,
+    lt_eq,
+    equal_comp,
+    diff_comp,
+    true_,
+    false_
 };
 
 inline std::string to_string(const TokenType type)
@@ -56,10 +68,28 @@ inline std::string to_string(const TokenType type)
         return "`}`";
     case TokenType::if_:
         return "`if`";
-    case TokenType::elif:
+    case TokenType::elif_:
         return "`elif`";
     case TokenType::else_:
         return "`else`";
+    case TokenType::while_:
+        return "`while`";
+    case TokenType::gt:
+        return "`>`";
+    case TokenType::lt:
+        return "`<`";
+    case TokenType::gt_eq:
+        return "`>=`";
+    case TokenType::lt_eq:
+        return "`<=`";
+    case TokenType::equal_comp:
+        return "`==`";
+    case TokenType::diff_comp:
+        return "`!=`";
+    case TokenType::true_:
+        return "`true`";
+    case TokenType::false_:
+        return "`false`";
     }
     assert(false);
 }
@@ -115,11 +145,23 @@ public:
                     buf.clear();
                 }
                 else if (buf == "elif") {
-                    tokens.push_back({ TokenType::elif, line_count });
+                    tokens.push_back({ TokenType::elif_, line_count });
                     buf.clear();
                 }
                 else if (buf == "else") {
                     tokens.push_back({ TokenType::else_, line_count });
+                    buf.clear();
+                }
+                else if (buf == "while") {
+                    tokens.push_back({ TokenType::while_, line_count });
+                    buf.clear();
+                }
+                else if (buf == "true") {
+                    tokens.push_back({ TokenType::true_, line_count });
+                    buf.clear();
+                }
+                else if (buf == "false") {
+                    tokens.push_back({ TokenType::false_, line_count });
                     buf.clear();
                 }
                 else {
@@ -170,7 +212,7 @@ public:
                 consume();
                 tokens.push_back({ TokenType::semi, line_count });
             }
-            else if (peek().value() == '=') {
+            else if (peek().value() == '=' && peek(1).has_value() && peek(1).value() != '=') {
                 consume();
                 tokens.push_back({ TokenType::eq, line_count });
             }
@@ -189,6 +231,34 @@ public:
             else if (peek().value() == '/') {
                 consume();
                 tokens.push_back({ TokenType::fslash, line_count });
+            }
+            else if (peek().value() == '>' && peek(1).has_value() && peek(1).value() != '=') {
+                consume();
+                tokens.push_back({ TokenType::gt, line_count });
+            }
+            else if (peek().value() == '<' && peek(1).has_value() && peek(1).value() != '=') {
+                consume();
+                tokens.push_back({ TokenType::lt, line_count });
+            }
+            else if (peek().value() == '>' && peek(1).has_value() && peek(1).value() == '=') {
+                consume();
+                consume();
+                tokens.push_back({ TokenType::gt_eq, line_count });
+            }
+            else if (peek().value() == '<' && peek(1).has_value() && peek(1).value() == '=') {
+                consume();
+                consume();
+                tokens.push_back({ TokenType::lt_eq, line_count });
+            }
+            else if (peek().value() == '=' && peek(1).has_value() && peek(1).value() == '=') {
+                consume();
+                consume();
+                tokens.push_back({ TokenType::equal_comp, line_count });
+            }
+            else if (peek().value() == '!' && peek(1).has_value() && peek(1).value() == '=') {
+                consume();
+                consume();
+                tokens.push_back({ TokenType::diff_comp, line_count });
             }
             else if (peek().value() == '{') {
                 consume();

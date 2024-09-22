@@ -1,0 +1,21 @@
+[PROG] -> [STMT]*
+
+[STMT] -> exit([EXPR]); || let [VarType] ident = [EXPR]; || ident = [EXPR]; || if([BoolExpr])[SCOPE][IfPred] || While([BoolExpr])[SCOPE] || [SCOPE] || return([EXPR]); || function ident ([Decl_Param]) [SCOPE] || ident([[Call_Param]]);
+
+[VarType] -> int || char 
+
+[DeclParam] -> [VarType] ident || [VarType] ident, [Decl_Param]
+
+[CallParam] -> [EXPR] || [EXPR], [Call_Param]
+
+[SCOPE] -> {[STMT]*}
+
+[IfPred] -> elif([BoolExpr])[SCOPE][IfPred] || else[SCOPE] || ε
+
+[EXPR] -> [TERM] || [BinExpr]
+
+[BinExpr] -> [EXPR] * [EXPR] || [EXPR] / [EXPR] || [EXPR] + [EXPR] || [EXPR] - [EXPR]
+
+[BoolExpr] -> [EXPR] > [EXPR] || [EXPR] < [EXPR] || [EXPR] == [EXPR] || [EXPR] != [EXPR] || true || false
+
+[TERM] -> int_lit || char_lit || ident || ([EXPR])
