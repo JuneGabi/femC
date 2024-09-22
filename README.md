@@ -32,3 +32,26 @@ Executable will be `femc` in the `build/` directory.
 ./build/femc ./main.femc
 ./out; echo $?
 ```
+
+## Example of femC language syntax
+
+```js
+let y = (10 - 2 * 3) / 2;
+let x = 1; //comment
+while(x < 9) {
+    x = x + 1;
+}
+if(x == 10) {
+    exit(1);
+}
+elif(x > 10) {
+    exit(0);
+}
+else {
+    exit(y);
+}
+
+/*
+exit(4);
+*/
+```
